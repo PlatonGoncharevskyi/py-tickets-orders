@@ -77,10 +77,10 @@ class MovieSessionListSerializer(MovieSessionSerializer):
 class TicketSerializer(serializers.ModelSerializer):
     movie_session = MovieSessionListSerializer(read_only=True)
 
-    movie_session_id = serializers.PrimaryKeyRelatedField(
+    movie_session = serializers.PrimaryKeyRelatedField(
         write_only=True,
-        source='movie_session',
-        queryset=MovieSession.objects.all()
+        queryset=MovieSession.objects.all(),
+        source='movie_session'
     )
 
     class Meta:
@@ -96,12 +96,14 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = ("id", "tickets", "created_at")
 
     def create(self, validated_data):
+        user = self.context['request'].user
+        tickets_data = validated_data.pop("tickets")
+
         with transaction.atomic():
-            tickets_data = validated_data.pop("tickets")
-            order = Order.objects.create(**validated_data)
+            order = Order.objects.create(user=user, **validated_data)
             for ticket_data in tickets_data:
                 Ticket.objects.create(order=order, **ticket_data)
-            return order
+        return order
 
 
 class TakenPlaceSerializer(serializers.ModelSerializer):
