@@ -54,11 +54,11 @@ class MovieViewSet(viewsets.ModelViewSet):
 
         if actors:
             actors = [int(str_id) for str_id in actors.split(",")]
-            queryset = Movie.objects.filter(actors__id__in=actors)
+            queryset = queryset.filter(actors__id__in=actors)
 
         if genres:
             actors = [int(str_id) for str_id in actors.split(",")]
-            queryset = Movie.objects.filter(actors__id__in=genres)
+            queryset = queryset.filter(actors__id__in=genres)
 
         if title:
             queryset = queryset.filter(title__icontains=title)
@@ -90,15 +90,17 @@ class MovieSessionViewSet(viewsets.ModelViewSet):
 
         if movie:
             movie = [int(str_id) for str_id in movie.split(",")]
-            queryset = MovieSession.objects.filter(movie__id__in=movie)
+            queryset = queryset.filter(movie__id__in=movie)
 
         if date:
-            queryset = MovieSession.objects.filter(show_time__date=date)
+            queryset = queryset.filter(show_time__date=date)
 
         if self.action == "list":
-            queryset = queryset.prefetch_related("movie").annotate(tickets_available=F("cinema_hall__rows") * F("cinema_hall__seats_in_row") - Count("tickets"))
+            queryset = queryset.prefetch_related("movie").annotate(tickets_available=F("cinema_hall__capacity") - Count("tickets"))
         if self.action == "retrieve":
-            queryset = queryset.prefetch_related("movie")
+            queryset = queryset.prefetch_related("movie",
+        "cinema_hall",
+        "tickets")
 
         return queryset.distinct()
 
@@ -116,7 +118,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         queryset = self.queryset.filter(user=self.request.user)
 
         if self.action == "list":
-            queryset = queryset.prefetch_related("tickets__movie_session")
+            queryset = queryset.prefetch_related("tickets__movie_session__movie",
+    "tickets__movie_session__cinema_hall")
 
         return queryset
 
